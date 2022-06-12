@@ -1,0 +1,93 @@
+---
+title: "Outcome of Basketball"
+author: "Muxing Wang"
+date: '2022-06-08'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+suppose $y_1 \sim Pois(\lambda_1), y_2\sim Pois(\lambda_2)$
+
+$$
+P(y_1 = y_2) = \sum_{k=0}^{\infty} P(y_1=k, y_2 = k) \overset{\mathrm{indep}}{=}
+ \sum_{k=0}^{\infty} P(y_1 = k)P(y_2 = k) = \sum_{k=0}^{\infty} 
+\frac{e^{-\lambda_1}\lambda_1^k}{k!}\frac{e^{-\lambda_2}\lambda_2^k}{k!} = 
+\sum_{k=0}^{\infty}\frac{e^{-\lambda_1-\lambda_2}(\lambda_1\lambda_2)^k}{(k!)^2}
+$$
+
+I found Skellam distribution can describe such events, therefore I just adopted it.
+
+```{r}
+K=120
+lambda1 = 4
+lambda2 = 6
+prob2 = 0
+for(k in 0:K){
+    prob2 = prob2+ (1-sum(exp(-lambda1)*lambda1**(0:k)/factorial(0:k)))*exp(-lambda2)*lambda2**k/factorial(k)
+}
+prob = 0
+for(i in 1:100){
+  prob = prob + dskellam(i,4,6,log=FALSE)
+}
+denominator = 1- exp(-lambda1-lambda2)* sum((lambda1*lambda2)**(0:K)/factorial((0:K))**2)
+deno.skellam = 1 - dskellam(0,4,6,log=FALSE)
+print(prob - prob2)
+print(deno.skellam - denominator)
+```
+
+```{r}
+library(INLA)
+library(dplyr)
+library(magrittr)
+games2021 = read.csv('newdat/games2021_v2.csv')
+games2021 %<>%
+  mutate(GAME_DATE_EST= as.Date(GAME_DATE_EST, format= "%m/%d/%Y"))
+
+dates = unique(games2021$GAME_DATE_EST)
+split = dates[15]
+games.sub = games2021
+games.sub$PTS_home[games.sub$GAME_DATE_EST>split] = NA  ## for prediction
+games.sub$PTS_away[games.sub$GAME_DATE_EST>split] = NA
+
+G = nrow(games.sub)
+y1 = games.sub$PTS_home
+y2 = games.sub$PTS_away
+y = c(y1,y2)
+a1 = as.character(games.sub$NAME_HOME)
+a2 = as.character(games.sub$NAME_AWAY)
+a = as.factor(c(a1,a2))
+d = as.factor(c(a2,a1))
+h1 = rep(1, G)
+h2 = rep(0, G)
+h = c(h1,h2)
+PTS_cur_season = c(games.sub$PTS_home_cur_season, games.sub$PTS_away_cur_season)
+FG_PCT_cur_season = c(games.sub$FG_PCT_home_cur_season, games.sub$FG_PCT_away_cur_season)
+FT_PCT_cur_season = c(games.sub$FT_PCT_home_cur_season, games.sub$FT_PCT_away_cur_season)
+FG3_PCT_cur_season = c(games.sub$FG3_PCT_home_cur_season, games.sub$FG3_PCT_away_cur_season)
+AST_cur_season = c(games.sub$AST_home_cur_season, games.sub$AST_away_cur_season)
+REB_cur_season = c(games.sub$REB_home_cur_season, games.sub$REB_away_cur_season)
+
+data = data.frame(y,a,d,h,PTS_cur_season,FG_PCT_cur_season,FT_PCT_cur_season,FG3_PCT_cur_season,AST_cur_season,REB_cur_season)
+basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season, data = data, family = "poisson")
+
+summary(basketball.inla)
+```
+
+```{r}
+# ranked probability score
+rps<- function(obs,pred, R){
+  res = 0
+  for (i in 1:(R-1)){
+    subres = 0
+    for(j in 1:i){
+      subres = subres + (pred[j] - obs[j])
+    }
+    res = res + subres**2
+  }
+  res* 1/ (R-1)
+}
+rps(c(1,0,0),c(0.8,0.2,0),3)
+```
