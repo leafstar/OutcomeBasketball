@@ -1,0 +1,3 @@
+games_v1.csv, added nicknames and headcoach names for both home and away teams.
+games2021_v1.csv, subset of games_v1.csv with only season 2021 data.
+games2021_v2.csv, added running average features.

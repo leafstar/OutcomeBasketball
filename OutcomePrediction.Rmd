@@ -38,24 +38,55 @@ print(prob - prob2)
 print(deno.skellam - denominator)
 ```
 
+## Loading libararies
+
 ```{r}
 library(INLA)
 library(dplyr)
 library(magrittr)
+library(locfit)
+```
+
+## Reading data
+
+```{r}
 games2021 = read.csv('newdat/games2021_v2.csv')
 games2021 %<>%
   mutate(GAME_DATE_EST= as.Date(GAME_DATE_EST, format= "%m/%d/%Y"))
+games2021$PTS_home_cur_season[games2021$PTS_home_cur_season == 0] <- NA #1
+games2021$FG_PCT_home_cur_season[games2021$FG_PCT_home_cur_season == 0] <- NA #2
+games2021$FT_PCT_home_cur_season[games2021$FT_PCT_home_cur_season == 0] <- NA #3
+games2021$FG3_PCT_home_cur_season[games2021$FG3_PCT_home_cur_season == 0] <- NA #4
+games2021$AST_home_cur_season[games2021$AST_home_cur_season == 0] <- NA #5
+games2021$REB_home_cur_season[games2021$REB_home_cur_season == 0] <- NA #6
+games2021$PTS_away_cur_season[games2021$PTS_away_cur_season == 0] <- NA #7
+games2021$FG_PCT_away_cur_season[games2021$FG_PCT_away_cur_season == 0] <- NA #8
+games2021$FT_PCT_away_cur_season[games2021$FT_PCT_away_cur_season == 0] <- NA #9
+games2021$FG3_PCT_away_cur_season[games2021$FG3_PCT_away_cur_season == 0] <- NA #10
+games2021$AST_away_cur_season[games2021$AST_away_cur_season == 0] <- NA #11
+games2021$REB_away_cur_season[games2021$REB_away_cur_season == 0] <- NA #12
+```
 
+## Pre-processing
+
+```{r}
 dates = unique(games2021$GAME_DATE_EST)
-split = dates[15]
-games.sub = games2021
+split = dates[2]  ## data after this are used for prediction
+end.date = dates[1] 
+games.sub = games2021[games2021$GAME_DATE_EST<=end.date,] ## the dataset used for training and testing
 games.sub$PTS_home[games.sub$GAME_DATE_EST>split] = NA  ## for prediction
 games.sub$PTS_away[games.sub$GAME_DATE_EST>split] = NA
+
+games.sub$HOME_TEAM_WINS[games.sub$GAME_DATE_EST>split] = NA
 
 G = nrow(games.sub)
 y1 = games.sub$PTS_home
 y2 = games.sub$PTS_away
 y = c(y1,y2)
+
+y1.binary = games.sub$HOME_TEAM_WINS
+y.binary = c(y1.binary, 1-y1.binary)
+
 a1 = as.character(games.sub$NAME_HOME)
 a2 = as.character(games.sub$NAME_AWAY)
 a = as.factor(c(a1,a2))
@@ -70,13 +101,86 @@ FG3_PCT_cur_season = c(games.sub$FG3_PCT_home_cur_season, games.sub$FG3_PCT_away
 AST_cur_season = c(games.sub$AST_home_cur_season, games.sub$AST_away_cur_season)
 REB_cur_season = c(games.sub$REB_home_cur_season, games.sub$REB_away_cur_season)
 
-data = data.frame(y,a,d,h,PTS_cur_season,FG_PCT_cur_season,FT_PCT_cur_season,FG3_PCT_cur_season,AST_cur_season,REB_cur_season)
-basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season, data = data, family = "poisson")
+data = data.frame(y,y.binary,a,d,h,PTS_cur_season,FG_PCT_cur_season,FT_PCT_cur_season,FG3_PCT_cur_season,AST_cur_season,REB_cur_season)
+```
 
+## Poisson Regression Modelling
+
+```{r}
+basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season, data = data, family = "poisson",control.compute=list(config = TRUE),control.predictor = list(compute = TRUE))
+
+
+
+samp.r <- inla.posterior.sample(1000, basketball.inla)
+
+predictors.r=inla.posterior.sample.eval(function(...) {Predictor}, samp.r)
+
+to.be.predicted = which(is.na(data$y))
+
+number.matches = length(to.be.predicted)/2
+
+predictors.test = predictors.r[to.be.predicted,]
+
+lambda.test = exp(predictors.test)
+
+winning.prob.matrix = matrix(rep(0,number.matches*1000),nrow = number.matches,ncol = 1000)
+
+for(i in 1:number.matches){
+  for( j in 1:1000){
+    winning.prob.matrix[i,j] = winning.prob(lambda.test[i,j],lambda.test[i+number.matches,j])
+  }
+}
+
+obs.win = games2021$HOME_TEAM_WINS[to.be.predicted[1:number.matches]]
+
+true.score =c( games2021[to.be.predicted[1:number.matches],]$PTS_home,games2021[to.be.predicted[1:number.matches],]$PTS_away)
+
+pred.win.binary = as.numeric(rowMeans(winning.prob.matrix)>0.5)
+pred.win.prob = rowMeans(winning.prob.matrix)
+
+sum(as.numeric(obs.win == pred.win.binary))/number.matches ## accuracy
+mean((pred.win.prob - obs.win)**2) ## mean rps
+sd((pred.win.prob - obs.win)**2) ## sd rps 
+#rps(obs.win, pred.win, 2)
 summary(basketball.inla)
 ```
 
+## Logistic Regression
+
 ```{r}
+
+basketball.inla.logi = inla(y.binary~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season, data = data, family = "binomial",Ntrials = 1,control.compute=list(config = TRUE),control.predictor = list(compute = TRUE),num.threads = 2)
+summary(basketball.inla.logi)
+samp.r.logi <- inla.posterior.sample(1000, basketball.inla.logi)
+
+## n*1000 table
+predictors.r.logi=inla.posterior.sample.eval(function(...) {Predictor}, samp.r.logi)
+## convert to probabilty n*1000 #pi#
+prob.logi = expit(predictors.r.logi[to.be.predicted,]) 
+winning.prob.logi = matrix(rep(1000*number.matches),nrow = number.matches,ncol = 1000)
+for(i in 1:number.matches){
+  winning.prob.logi[i,] = prob.logi[i,]/ (prob.logi[i,] + prob.logi[i+number.matches,])
+}
+
+
+
+
+
+pred.win.binary.logi = as.numeric(rowMeans(winning.prob.logi)>0.5)
+pred.win.prob.logi = rowMeans(winning.prob.logi)
+
+sum(as.numeric(obs.win == pred.win.binary.logi))/number.matches ## accuracy
+mean((pred.win.prob - obs.win)**2) ## mean rps
+sd((pred.win.prob - obs.win)**2) ## sd rps 
+```
+
+## Helper functions
+
+```{r}
+## team1 wins
+winning.prob = function(lambda1,lambda2){
+  sum(dskellam(1:100,lambda1,lambda2,log=FALSE))/(1 - dskellam(0,lambda1,lambda2,log=FALSE))
+}
 # ranked probability score
 rps<- function(obs,pred, R){
   res = 0
