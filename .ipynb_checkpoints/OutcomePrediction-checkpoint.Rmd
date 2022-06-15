@@ -21,11 +21,6 @@ $$
 I found Skellam distribution can describe such events, therefore I just adopted it.
 
 ```{r}
-library(INLA)
-library(dplyr)
-library(magrittr)
-library(locfit)
-library(extraDistr)
 K=120
 lambda1 = 4
 lambda2 = 6
@@ -43,70 +38,46 @@ print(prob - prob2)
 print(deno.skellam - denominator)
 ```
 
-## Helper functions
+## Loading libararies
 
 ```{r}
-## team1 wins
-winning.prob = function(lambda1,lambda2){
-  sum(dskellam(1:100,lambda1,lambda2,log=FALSE))/(1 - dskellam(0,lambda1,lambda2,log=FALSE))
-}
-# ranked probability score
-rps<- function(obs,pred, R){
-  res = 0
-  for (i in 1:(R-1)){
-    subres = 0
-    for(j in 1:i){
-      subres = subres + (pred[j] - obs[j])
-    }
-    res = res + subres**2
-  }
-  res* 1/ (R-1)
-}
-rps(c(1,0,0),c(0.8,0.2,0),3)
+library(INLA)
+library(dplyr)
+library(magrittr)
+library(locfit)
 ```
 
 ## Reading data
 
 ```{r}
-games2021 = read.csv('newdat/games2016_v1.csv')
-#games = read.csv('newdat/games2020_v1.csv')
+games2021 = read.csv('newdat/games2021_v2.csv')
 games2021 %<>%
   mutate(GAME_DATE_EST= as.Date(GAME_DATE_EST, format= "%m/%d/%Y"))
 games2021$PTS_home_cur_season[games2021$PTS_home_cur_season == 0] <- NA #1
-games2021$PTS_LOST_home_cur_season[games2021$PTS_LOST_home_cur_season == 0] <- NA #1
 games2021$FG_PCT_home_cur_season[games2021$FG_PCT_home_cur_season == 0] <- NA #2
 games2021$FT_PCT_home_cur_season[games2021$FT_PCT_home_cur_season == 0] <- NA #3
 games2021$FG3_PCT_home_cur_season[games2021$FG3_PCT_home_cur_season == 0] <- NA #4
 games2021$AST_home_cur_season[games2021$AST_home_cur_season == 0] <- NA #5
 games2021$REB_home_cur_season[games2021$REB_home_cur_season == 0] <- NA #6
-
 games2021$PTS_away_cur_season[games2021$PTS_away_cur_season == 0] <- NA #7
-games2021$PTS_LOST_away_cur_season[games2021$PTS_LOST_away_cur_season == 0] <- NA #7
 games2021$FG_PCT_away_cur_season[games2021$FG_PCT_away_cur_season == 0] <- NA #8
 games2021$FT_PCT_away_cur_season[games2021$FT_PCT_away_cur_season == 0] <- NA #9
 games2021$FG3_PCT_away_cur_season[games2021$FG3_PCT_away_cur_season == 0] <- NA #10
 games2021$AST_away_cur_season[games2021$AST_away_cur_season == 0] <- NA #11
 games2021$REB_away_cur_season[games2021$REB_away_cur_season == 0] <- NA #12
-
 ```
 
 ## Pre-processing
 
 ```{r}
-
 dates = unique(games2021$GAME_DATE_EST)
-split = dates[20]  ## data after,(not including), this are used for prediction
-split = "2021-05-22" ## playoffs 2021
-split = "2020-08-17"  ## playoffs 2020
-split = "2019-04-13"  ## playoffs 2019
-split = "2018-04-14"  ## playoffs 2018
-split = "2017-04-15"  ## playoffs 2018
-end.date = dates[1]
+split = dates[2]  ## data after this are used for prediction
+end.date = dates[1] 
 games.sub = games2021[games2021$GAME_DATE_EST<=end.date,] ## the dataset used for training and testing
-games.sub$PTS_home[games.sub$GAME_DATE_EST>=split] = NA  ## for prediction
-games.sub$PTS_away[games.sub$GAME_DATE_EST>=split] = NA
+games.sub$PTS_home[games.sub$GAME_DATE_EST>split] = NA  ## for prediction
+games.sub$PTS_away[games.sub$GAME_DATE_EST>split] = NA
 
-games.sub$HOME_TEAM_WINS[games.sub$GAME_DATE_EST>=split] = NA
+games.sub$HOME_TEAM_WINS[games.sub$GAME_DATE_EST>split] = NA
 
 G = nrow(games.sub)
 y1 = games.sub$PTS_home
@@ -123,12 +94,8 @@ d = as.factor(c(a2,a1))
 h1 = rep(1, G)
 h2 = rep(0, G)
 h = c(h1,h2)
-
 PTS_cur_season = c(games.sub$PTS_home_cur_season, games.sub$PTS_away_cur_season)
 PTS_cur_season_oppo = c(games.sub$PTS_away_cur_season,games.sub$PTS_home_cur_season)
-
-PTS_LOST_cur_season = c(games.sub$PTS_LOST_home_cur_season, games.sub$PTS_LOST_away_cur_season)
-PTS_LOST_cur_season_oppo = c(games.sub$PTS_LOST_away_cur_season,games.sub$PTS_LOST_home_cur_season)
 
 FG_PCT_cur_season = c(games.sub$FG_PCT_home_cur_season, games.sub$FG_PCT_away_cur_season)
 FG_PCT_cur_season_oppo = c(games.sub$FG_PCT_away_cur_season, games.sub$FG_PCT_home_cur_season)
@@ -149,14 +116,15 @@ WINRATE_cur_season_oppo = c(games.sub$WINRATE_away_cur_season,games.sub$WINRATE_
 ROUND = c(games.sub$round_number_home, games.sub$round_number_away)
 
 data = data.frame(y,y.binary,a,d,h,PTS_cur_season,FG_PCT_cur_season,FT_PCT_cur_season,FG3_PCT_cur_season,AST_cur_season,REB_cur_season,WINRATE_cur_season,
-                  PTS_cur_season_oppo,FG_PCT_cur_season_oppo,FT_PCT_cur_season_oppo,FG3_PCT_cur_season_oppo,AST_cur_season_oppo,REB_cur_season_oppo,WINRATE_cur_season_oppo,ROUND,PTS_LOST_cur_season,PTS_LOST_cur_season_oppo)
+                  PTS_cur_season_oppo,FG_PCT_cur_season_oppo,FT_PCT_cur_season_oppo,FG3_PCT_cur_season_oppo,AST_cur_season_oppo,REB_cur_season_oppo,WINRATE_cur_season_oppo,ROUND)
 ```
 
 ## Poisson Regression Modelling
 
 ```{r}
-#+PTS_cur_season_oppo+FG_PCT_cur_season_oppo+FT_PCT_cur_season_oppo+FG3_PCT_cur_season_oppo+AST_cur_season_oppo+REB_cur_season_oppo+WINRATE_cur_season_oppo + PTS_LOST_cur_season+PTS_LOST_cur_season_oppo
-basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+ PTS_LOST_cur_season , data = data, family = "poisson",control.compute=list(config = TRUE,cpo = TRUE,dic = TRUE),control.predictor = list(compute = TRUE))
+basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+PTS_cur_season_oppo+FG_PCT_cur_season_oppo+FT_PCT_cur_season_oppo+FG3_PCT_cur_season_oppo+AST_cur_season_oppo+REB_cur_season_oppo+WINRATE_cur_season_oppo, data = data, family = "poisson",control.compute=list(config = TRUE),control.predictor = list(compute = TRUE))
+
+
 
 samp.r <- inla.posterior.sample(1000, basketball.inla)
 
@@ -189,8 +157,6 @@ sum(as.numeric(obs.win == pred.win.binary))/number.matches ## accuracy
 mean((pred.win.prob - obs.win)**2) ## mean rps
 sd((pred.win.prob - obs.win)**2) ## sd rps 
 #rps(obs.win, pred.win, 2)
-nslcpo = -sum(log(na.omit(basketball.inla$cpo$cpo)))
-cat("nsdlcpo: ", nslcpo, "\n")
 summary(basketball.inla)
 ```
 
@@ -198,7 +164,8 @@ summary(basketball.inla)
 
 ```{r}
 #+PTS_cur_season_oppo+FG_PCT_cur_season_oppo+FT_PCT_cur_season_oppo+FG3_PCT_cur_season_oppo+AST_cur_season_oppo+REB_cur_season_oppo+WINRATE_cur_season_oppo
-basketball.inla.logi = inla(y.binary~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+ PTS_LOST_cur_season , data = data, family = "binomial",Ntrials = 1,control.compute=list(config = TRUE,dic=TRUE,cpo=TRUE),control.predictor = list(compute = TRUE),num.threads = 2)
+basketball.inla.logi = inla(y.binary~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season
+                            , data = data, family = "binomial",Ntrials = 1,control.compute=list(config = TRUE),control.predictor = list(compute = TRUE),num.threads = 2)
 summary(basketball.inla.logi)
 samp.r.logi <- inla.posterior.sample(1000, basketball.inla.logi)
 
@@ -217,6 +184,28 @@ pred.win.prob.logi = rowMeans(winning.prob.logi)
 sum(as.numeric(obs.win == pred.win.binary.logi))/number.matches ## accuracy
 mean((pred.win.prob.logi - obs.win)**2) ## mean rps
 sd((pred.win.prob.logi - obs.win)**2) ## sd rps 
+```
+
+## Helper functions
+
+```{r}
+## team1 wins
+winning.prob = function(lambda1,lambda2){
+  sum(dskellam(1:100,lambda1,lambda2,log=FALSE))/(1 - dskellam(0,lambda1,lambda2,log=FALSE))
+}
+# ranked probability score
+rps<- function(obs,pred, R){
+  res = 0
+  for (i in 1:(R-1)){
+    subres = 0
+    for(j in 1:i){
+      subres = subres + (pred[j] - obs[j])
+    }
+    res = res + subres**2
+  }
+  res* 1/ (R-1)
+}
+rps(c(1,0,0),c(0.8,0.2,0),3)
 ```
 
 ```{r}
