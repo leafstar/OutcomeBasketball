@@ -6,7 +6,18 @@ Using INLA to predict the outcome of basketball matches.
 
 games2021_v2.csv: adding the average statistics before the current game in this season for both teams. 
 
+Dataset Specification:
 
+| Season | Starting date | Ending date | Playoff starts |
+| ------ | ------------- | ----------- | -------------- |
+| 2021   |               |             |                |
+| 2020   |               |             |                |
+| 2019   |               |             |                |
+| 2018   |               |             |                |
+| 2017   |               |             |                |
+| 2016   |               |             |                |
+| 2015   |               |             |                |
+| 2014   |               |             |                |
 
 experiment record
 
