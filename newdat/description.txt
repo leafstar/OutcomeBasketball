@@ -1,7 +1,7 @@
 games_v1.csv, added nicknames and headcoach names for both home and away teams.
 games2021_v1.csv, subset of games_v1.csv with only season 2021 data.
-games2021_v2.csv, added running average features.
+
+games_extended.csv: games_v1.csv with seasonal features. from season 2004 to 2021
 
 
-
-features: average points/rebounds/assists/field goal percentage/fg3/win rate/points lost/free throw percentage/   in current season before the candidate game.
+2.05
