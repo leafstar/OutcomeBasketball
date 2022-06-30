@@ -1,78 +1,14 @@
----
-title: "Outcome of Basketball"
-author: "Muxing Wang"
-date: '2022-06-08'
-output: pdf_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-suppose $y_1 \sim Pois(\lambda_1), y_2\sim Pois(\lambda_2)$
-
-$$
-P(y_1 = y_2) = \sum_{k=0}^{\infty} P(y_1=k, y_2 = k) \overset{\mathrm{indep}}{=}
- \sum_{k=0}^{\infty} P(y_1 = k)P(y_2 = k) = \sum_{k=0}^{\infty} 
-\frac{e^{-\lambda_1}\lambda_1^k}{k!}\frac{e^{-\lambda_2}\lambda_2^k}{k!} = 
-\sum_{k=0}^{\infty}\frac{e^{-\lambda_1-\lambda_2}(\lambda_1\lambda_2)^k}{(k!)^2}
-$$
-
-I found Skellam distribution can describe such events, therefore I just adopted it.
-
-```{r}
-library(INLA)
-inla.setOption(inla.mode="experimental")
-library(dplyr)
-library(magrittr)
-library(locfit)
-library(extraDistr)
-library(Matrix)
-K=120
-lambda1 = 4
-lambda2 = 6
-prob2 = 0
-for(k in 0:K){
-    prob2 = prob2+ (1-sum(exp(-lambda1)*lambda1**(0:k)/factorial(0:k)))*exp(-lambda2)*lambda2**k/factorial(k)
-}
-prob = 0
-for(i in 1:100){
-  prob = prob + dskellam(i,4,6,log=FALSE)
-}
-denominator = 1- exp(-lambda1-lambda2)* sum((lambda1*lambda2)**(0:K)/factorial((0:K))**2)
-deno.skellam = 1 - dskellam(0,4,6,log=FALSE)
-print(prob - prob2)
-print(deno.skellam - denominator)
-```
-
-## Helper functions
-
-```{r}
-## team1 wins
-winning.prob = function(lambda1,lambda2){
-  sum(dskellam(1:100,lambda1,lambda2,log=FALSE))/(1 - dskellam(0,lambda1,lambda2,log=FALSE))
-}
-# ranked probability score
-rps<- function(obs,pred, R){
-  res = 0
-  for (i in 1:(R-1)){
-    subres = 0
-    for(j in 1:i){
-      subres = subres + (pred[j] - obs[j])
-    }
-    res = res + subres**2
-  }
-  res* 1/ (R-1)
-}
-rps(c(1,0,0),c(0.8,0.2,0),3)
-```
-
-## Reading data
-
-```{r}
-#path = 'newdat/games2019_v1.csv'
+## script for Poisson regression and Logistic Regression model
 path = 'newdat/games_extended.csv'
 games.total = read.csv(path)
+
+
+
+poisson.acc = c()
+logi.acc = c()
+for(yyear in 2004:2015){
+
+
 
 ## change type to date
 games.total %<>%
@@ -82,7 +18,7 @@ games.total %<>%
 
 #[start ------training-------)--[split-------testing-------end]
 dates = unique(games.total$GAME_DATE_EST)
-                      ##  end           season
+##  end           season
 #split = "2021-05-22" ##  2021-07-20  2020-2021    2020.csv
 #split = "2020-08-17"  ## 2020-10-11  2019-2020    2019.csv
 #split = "2019-04-13"  ## 2019-06-13  2018-2019    2018.csv
@@ -101,7 +37,7 @@ dates = unique(games.total$GAME_DATE_EST)
 #split = "2006-04-22"  ## 2006-06-20  2005-2006    2005.csv
 #split = "2005-04-23"  ## 2005-06-23  2004-2005    2004.csv
 
-split = "2018-04-14" # 
+split = "2016-06-20" # 
 
 start.date = dates[length(dates)]
 start.date = "2019-06-13"
@@ -109,7 +45,7 @@ end.date = "2020-10-11"
 games.sub = games.total[games.total$GAME_DATE_EST<=end.date,] ## the dataset used for training and testing
 games.sub = games.sub[games.sub$GAME_DATE_EST>start.date,]
 # |(games.total$SEASON == 2016)|(games.total$SEASON == 2015)|(games.total$SEASON == 2014)|(games.total$SEASON == 2013)|(games.total$SEASON == 2012)|(games.total$SEASON == 2011)
-games.sub = games.total[(games.total$SEASON <= 2017)&(games.total$SEASON >= 2011),]
+games.sub = games.total[(games.total$SEASON <= 2016)&(games.total$SEASON >= yyear),]
 games.true = games.sub
 games.sub$PTS_home[games.sub$GAME_DATE_EST>=split] = NA  ## for prediction
 games.sub$PTS_away[games.sub$GAME_DATE_EST>=split] = NA
@@ -141,11 +77,8 @@ n.team = length(unique(games.sub$NAME_HOME))
 
 max.season = max(games.sub$SEASON)
 min.season = min(games.sub$SEASON)
-```
 
-### Add seasonal effect feature
 
-```{r}
 ## add attack/defend index feature
 teams = levels(as.factor(games.total$NAME_HOME))
 
@@ -161,11 +94,9 @@ for (i in 1:nrow(games.sub)){
 }
 games.sub$a.index = a.index
 games.sub$d.index = d.index
-```
 
-## Split one row to two
 
-```{r}
+
 
 
 G = nrow(games.sub)
@@ -218,31 +149,27 @@ season = c(games.sub$SEASON, games.sub$SEASON)
 
 data = data.frame(y,y.binary,a,d,h,PTS_cur_season,FG_PCT_cur_season,FT_PCT_cur_season,FG3_PCT_cur_season,AST_cur_season,REB_cur_season,WINRATE_cur_season,
                   PTS_cur_season_oppo,FG_PCT_cur_season_oppo,FT_PCT_cur_season_oppo,FG3_PCT_cur_season_oppo,AST_cur_season_oppo,REB_cur_season_oppo,WINRATE_cur_season_oppo,ROUND,PTS_LOST_cur_season,PTS_LOST_cur_season_oppo, season, a.season, d.season,depend)
-```
 
-### covariance matrix
 
-```{r}
 Q.single = toeplitz(c(2,-1, rep(0,n.season-2)))
 Q.single[1,1] = Q.single[n.season,n.season] = 1
 matrix.list = replicate(n.team, Q.single , simplify = FALSE)
 Q.a = bdiag(matrix.list)
 Q.d = Q.a
-```
 
-## Poisson Regression Modelling
 
-```{r}
+
+##
 print(Sys.time())
 print("Poisson")
 #+PTS_cur_season_oppo+FG_PCT_cur_season_oppo+FT_PCT_cur_season_oppo+FG3_PCT_cur_season_oppo+AST_cur_season_oppo+REB_cur_season_oppo+WINRATE_cur_season_oppo + PTS_LOST_cur_season+PTS_LOST_cur_season_oppo
 #+
 #+ +f(season, model = "ar1c", args.ar1c = list(Z = Z, Q.beta = Q.beta))
 basketball.inla = inla(y~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+ PTS_LOST_cur_season
-                     + f(a.season, model = "generic0", Cmatrix = Q.a, rankdef = 1, constr = TRUE) + f(d.season, model = "generic0", Cmatrix = Q.d, rankdef = 1, constr = TRUE)
-                     + f(depend)
-                     
-                     , data = data, family = "poisson",control.compute=list(config = TRUE,cpo = TRUE,dic = TRUE),control.predictor = list(compute = TRUE),verbose = FALSE)
+                       + f(a.season, model = "generic0", Cmatrix = Q.a, rankdef = 1, constr = TRUE) 
+                       + f(d.season, model = "generic0", Cmatrix = Q.d, rankdef = 1, constr = TRUE) 
+                       + f(depend)
+                       , data = data, family = "poisson",control.compute=list(config = TRUE,cpo = TRUE,dic = TRUE),control.predictor = list(compute = TRUE),verbose = FALSE)
 
 samp.r <- inla.posterior.sample(1000, basketball.inla)
 
@@ -271,24 +198,24 @@ true.score =c( games.true[to.be.predicted[1:number.matches],]$PTS_home,games.tru
 pred.win.binary = as.numeric(rowMeans(winning.prob.matrix)>0.5)
 pred.win.prob = rowMeans(winning.prob.matrix)
 
-sum(as.numeric(obs.win == pred.win.binary))/number.matches ## accuracy
-round(mean((pred.win.prob - obs.win)**2),5) ## mean rps
-round(sd((pred.win.prob - obs.win)**2),5) ## sd rps 
+cat("Accuracy:", sum(as.numeric(obs.win == pred.win.binary))/number.matches,"\n") ## accuracy
+cat("RPS:",round(mean((pred.win.prob - obs.win)**2),5)) ## mean rps
+cat(" (",round(sd((pred.win.prob - obs.win)**2),5), "\n") ## sd rps
 #rps(obs.win, pred.win, 2)
 nslcpo = -sum(log(na.omit(basketball.inla$cpo$cpo)))
 cat("nsdlcpo: ", nslcpo, "\n")
 cat("DIC:",basketball.inla$dic$dic,"\n")
 #summary(basketball.inla)
 print(Sys.time())
-```
+poisson.acc = c(poisson.acc, sum(as.numeric(obs.win == pred.win.binary))/number.matches)
 
-## Logistic Regression
 
-```{r}
+print("logistic")
 print(Sys.time())
 #+PTS_cur_season_oppo+FG_PCT_cur_season_oppo+FT_PCT_cur_season_oppo+FG3_PCT_cur_season_oppo+AST_cur_season_oppo+REB_cur_season_oppo+WINRATE_cur_season_oppo
 basketball.inla.logi = inla(y.binary~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+ PTS_LOST_cur_season
-                            + f(a.season, model = "generic0", Cmatrix = Q.a, rankdef = 1, constr = TRUE) +f(d.season, model = "generic0",Cmatrix = Q.d, rankdef = 1, constr = TRUE)
+                            #+ f(a.season, model = "generic0", Cmatrix = Q.a, rankdef = 1, constr = TRUE) 
+                            #+ f(d.season, model = "generic0", Cmatrix = Q.d, rankdef = 1, constr = TRUE)
                             , data = data, family = "binomial",Ntrials = 1,control.compute=list(config = TRUE,dic=TRUE,cpo=TRUE),control.predictor = list(compute = TRUE),num.threads = 2)
 #summary(basketball.inla.logi)
 samp.r.logi <- inla.posterior.sample(1000, basketball.inla.logi)
@@ -311,8 +238,9 @@ cat(" (",round(sd((pred.win.prob.logi - obs.win)**2),5),") \n") ## sd rps
 print(Sys.time())
 cat("total games:", nrow(games.sub) , "test data:", length(obs.win), ", from:",min.season, ",to: ", max.season,  "\n")
 cat("DIC:",basketball.inla.logi$dic$dic,"\n")
-```
+logi.acc = c(logi.acc, sum(as.numeric(obs.win == pred.win.binary.logi))/number.matches)
 
-```{r}
+print(summary(poisson.acc))
+print(summary(logi.acc))
 
-```
+}
