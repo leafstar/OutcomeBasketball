@@ -26,5 +26,7 @@ The folder newdat contains preprocessed datasets.
 
 [Bins.R](https://github.com/leafstar/OutcomeBasketball/blob/main/Bins.R) plots the actual win percentage of the home team against the expected win percentage of the home team.
 
+[priors.R](https://github.com/leafstar/OutcomeBasketball/blob/main/priors.R) experiments with different priors.
+
 Note that there are duplicate codes, and this is because we extended the experiments progressively and some helper functions were not defined.
 
