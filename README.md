@@ -22,5 +22,9 @@ The folder newdat contains preprocessed datasets.
 
 [bayesianModelCheck.R](https://github.com/leafstar/OutcomeBasketball/blob/main/bayesianModelCheck.R) is for model checking, like DIC, PIT, etc.
 
-[rps_true_prob.R](https://github.com/leafstar/OutcomeBasketball/blob/main/rps_true_prob.R) estimates what is the theoretical best RPS.  
+[rps_true_prob.R](https://github.com/leafstar/OutcomeBasketball/blob/main/rps_true_prob.R) estimates what is the theoretical best RPS. 
+
+[Bins.R](https://github.com/leafstar/OutcomeBasketball/blob/main/Bins.R) plots the actual win percentage of the home team against the expected win percentage of the home team.
+
+Note that there are duplicate codes, and this is because we extended the experiments progressively and some helper functions were not defined.
 
