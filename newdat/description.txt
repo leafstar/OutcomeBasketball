@@ -6,5 +6,305 @@ games_extended.csv: games_v1.csv with seasonal features. from season 2004 to 202
 
 2.05
 
+homewon/away won
+streak
+wins last 10 games.
 
 
+  
+  
+  
+  ## change type to date
+  #games.total %<>%
+    #mutate(GAME_DATE_EST= as.Date(GAME_DATE_EST, format= "%m/%d/%Y"))
+  
+  
+  
+  #[start ------training-------)--[split-------testing-------end]
+  #dates = unique(games.total$GAME_DATE_EST)
+  ##  end           season
+  #split = "2021-05-22" ##  2021-07-20  2020-2021    2020.csv
+  #split = "2020-08-17"  ## 2020-10-11  2019-2020    2019.csv
+  #split = "2019-04-13"  ## 2019-06-13  2018-2019    2018.csv
+  #split = "2018-04-14"  ## 2018-06-08  2017-2018    2017.csv
+  #split = "2017-04-15"  ## 2017-06-12  2016-2017    2016.csv
+  #split = "2016-04-13"  ## 2016-06-19  2015-2016    2015.csv
+  #split = "2015-04-15"  ## 2015-06-16  2014-2015    2014.csv 
+  #split = "2014-04-19"  ## 2014-06-15  2013-2014    2013.csv
+  #split = "2013-04-20"  ## 2013-06-20  2012-2013    2012.csv
+  #split = "2012-04-28"  ## 2012-06-21  2011-2012    2011.csv
+  #split = "2011-04-16"  ## 2011-06-12  2010-2011    2010.csv
+  #split = "2010-04-17"  ## 2010-06-17  2009-2010    2009.csv
+  #split = "2009-04-18"  ## 2009-06-14  2008-2009    2008.csv
+  #split = "2008-04-19"  ## 2008-06-17  2007-2008    2007.csv
+  #split = "2007-04-21"  ## 2007-06-14  2006-2007    2006.csv
+  #split = "2006-04-22"  ## 2006-06-20  2005-2006    2005.csv
+  #split = "2005-04-23"  ## 2005-06-23  2004-2005    2004.csv
+
+  M7 3 levels type1
+  M8 2 levels
+
+y.binary~1+a+d+h+PTS_cur_season+FG_PCT_cur_season+FT_PCT_cur_season+FG3_PCT_cur_season+AST_cur_season+REB_cur_season+WINRATE_cur_season+ PTS_LOST_cur_season + log(salary)+type*a + type*d
+                                
+                                #+ f(a.season, model = "generic0", Cmatrix = Q.a, rankdef = 1, constr = TRUE)
+                                #+ f(d.season, model = "generic0", Cmatrix = Q.d, rankdef = 1, constr = TRUE)
+                                #+ f(inla.group(travel), model = "rw1", scale.model = TRUE)
+
+
+
+\section{Ignore this}
+
+Now it's getting very technical \ldots{} I will cite \cite{shiina,groewe2001}. I will also show my incredible $\alpha$, $\beta$, and $\gamma$ mathematics and do some other fancy stuff.
+
+\subsection{Formulae}
+
+For example, look at this
+\begin{equation}\label{eqn:aProblem}
+\min{}\sum_{s\in\mathcal{S}}Pr_{s}\left[\sum_{t=1}^{T}\left(
+\sum_{g\in\mathcal{G}}\left(\alpha_{gts}C_{g}^{0}+
+p_{gts}C_{g}^{1}+\left(p_{gts}\right)^{2}C_{g}^{2}\right)
++\sum_{g\in\mathcal{C}}\gamma_{gts}C_{g}^{s}\right)\right],
+\end{equation}
+and you will see that it has a little number on the side so that I can refer to it as equation (\ref{eqn:aProblem}). Now if I do this
+\begin{eqnarray}
+\sum_{i=1}^{n}k_{i}&=&20\label{eqn:one}\\
+\sum_{j=20}^{m}\delta_{i}&\geq{}&\eta{}\notag
+\end{eqnarray}
+I can align two formulae and control which one has a number on the side. It is (\ref{eqn:one}). I can also do something like this
+\begin{displaymath}
+Y_{l}=\left[\begin{array}{cc}
+             \left(y_{s}+i\frac{b_{c}}{2}\right)\frac{1}{\tau{}^{2}} &
+             -y_{s}\frac{1}{\tau{}e^{-i\theta^{s}}}\\
+             -y_{s}\frac{1}{\tau{}e^{i\theta^{s}}} &
+             y_{s}+i\frac{b_{c}}{2}
+             \end{array}\right],
+\end{displaymath}
+and it won't have a number on the side. Now if I have to do some huge mathematics I'd better structure it a little and include linebreaks etc. so that it fits on one page.
+\begin{eqnarray}\label{eqn:horrible}
+p_{l}^{f}&=&G_{l11}\left(2v_{F(l)}\bar{v}_{F(l)}-\bar{v}_{F(l)}^{2}\right)\\
+&+&
+\bar{v}_{F(l)}\bar{v}_{T(l)}
+\left[
+B_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
++G_{l12}\cos{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+\right]\notag\\
+&+&
+\left[\begin{array}{r}
+      \bar{v}_{T(l)}
+      \left[
+      B_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      +G_{l12}\cos{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      \right]\\
+      \bar{v}_{F(l)}
+      \left[
+      B_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      +G_{l12}\cos{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      \right]\\
+      \bar{v}_{F(l)}\bar{v}_{T(l)}
+      \left[
+      B_{l12}\cos{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      -G_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      \right]\\
+      \bar{v}_{F(l)}\bar{v}_{T(l)}
+      \left[
+      -B_{l12}\cos{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      +G_{l12}\sin{}(\bar{\delta{}}_{F(l)}-\bar{\delta{}}_{T(l)})
+      \right]\\
+      \end{array}\right]
+\cdot{}
+\left[\begin{array}{c}
+      v_{F(l)}-\bar{v}_{F(l)}\\
+      v_{T(l)}-\bar{v}_{T(l)}\\
+      \delta_{F(l)}-\bar{\delta{}}_{F(l)}\\
+      \delta_{T(l)}-\bar{\delta{}}_{T(l)}
+      \end{array}\right],\notag
+\end{eqnarray}
+This is a lot of fun!
+\clearpage
+
+\subsection{Important Things}
+Finally, we should have a nice picture like this one. However, I won't forget that figures and tables are environments that float around in my document. So LaTeX will place them wherever it thinks they fit well with the surrounding text. I can try to change that with a float specifier, e.g. [!ht].
+%This is a comment. The Compiler ignores it. It is here to remind me that, if I use a .jpeg or .png picture file as below I will need to compile the document with the pdflatex compiler.
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.5\textwidth]{scenTree.png}
+\caption{Look at this scenario tree with funny times $t_{1}$ and scenarios $s_{1}$ etc.}
+\label{fig:scenarioTree}
+\end{figure}
+Now I want to use one of my own environments. I want to define something.
+\begin{Definition}
+ I define
+$$
+\Gamma_{\eta}:=\sum_{i=1}^{n}\sum_{j=i}^{n}\xi{}(i,j)
+$$
+\end{Definition}
+I definitely need some good tables, so I do this.
+\begin{table}[!ht]
+\centering
+\begin{tabular}{|ll|rrrr|}
+\hline
+Case&Generators&Therm. Units&Lines&Peak load: [MW]&[MVar]\\
+\hline\hline
+6 bus&3 at 3 buses&2&11&210&210\\
+9 bus&3 at 3 buses&3&9&315&115\\
+24 bus&33 at 11 buses&26&38&2850&580\\
+30 bus&6 at 6 buses&5&41&189.2&107.2\\
+39 bus&10 at 10 buses&7&46&6254.2&1387.1\\
+57 bus&7 at 7 buses&7&80&1250.8&336.4\\
+\hline
+\end{tabular}
+\caption{Something that doesn't make sense.}
+\label{tab:things}
+\end{table}
+I should really refer to Table \ref{tab:things}.
+
+\subsection{And now something else}
+
+\noindent
+Let:
+\begin{eqnarray*}
+\Omega_0 & = & \{(x,y,z,f): \text{ satisfying } (9)-(19)\}, \\
+\Omega_1 & = & \{(x,y,z,f): \text{ satisfying } (9),(11)-(20)\}, \\
+\overline{\Omega}_0 & = & \{\textbf{0}\leq (x,y,z,f) \leq \textbf{1}: \text{ satisfying } (9)-(18)\}, \\
+\overline{\Omega}_1 & = & \{\textbf{0}\leq (x,y,z,f) \leq \textbf{1}: \text{ satisfying } (9),(11)-(18),(20)\} \,.
+\end{eqnarray*}
+%
+where $\textbf{0}$ and $\textbf{1}$ are vectors of appropriate dimensions with 0's and 1's, respectively.
+Next, we see that both $\Omega_0$ and $\Omega_1$ give equivalent formulations for the A-MSSP. In particular, the following statements hold:
+
+\begin{Proposition}
+$\Omega_0 \subseteq \Omega_1$.
+\end{Proposition}
+
+\noindent
+\textbf{Proof.}
+Let us suppose there exists $(x,y,z,f) \in \Omega_1$ such that $(x,y,z,f) \notin \Omega_0$.
+Then, there exist indices $i \in I$ and $t \in \{0,\ldots,|T|-s_i\} $ with $x_i^t > \displaystyle 0.5\,\left( \sum_{h=1}^{s_i} x_i^{t+h} +1\right)$.
+By definition, $x_i^t = 1$ and $x_i^{t+h} = 0$ for all $h \in \{1,\dots,s_i\}$. By~(11) and (12), $\displaystyle \sum_{h=1}^{s_i} f_i^{th}=1$, so $f_i^{th'}=1$ for some $h' \in \{1,\dots,s_i\}$.
+But then,
+\[ 0 \:=\: x_i^{t+h'} \:=\: \sum_{h=\max \{1, t+h'-(|T|-s_i)\}}^{\min\{s_i,t+h'\}} f_i^{t+h'-h,h} \:\ge\: f_i^{th'} \:=\: 1 \,,
+\]
+as $h' \in [\max \{1, t+h'-(|T|-s_i)\}, \min\{s_i,t+h'\}]$.
+\hfill $\square$
+\bigskip
+
+\noindent
+This immediately gives us
+\begin{Corollary}
+AS is a valid formulation for the A-MSSP.
+\end{Corollary}
+
+\noindent
+Next, we compare the Linear Programming (LP) relaxations of the two formulations.
+
+\begin{Proposition}
+$\overline{\Omega}_1 \subseteq  \overline{\Omega}_0 $.
+\end{Proposition}
+
+\noindent
+\textbf{Proof.}
+Homework
+\hfill $\square$
+\cleardoublepage
+
+
+
+
+
+
+\begin{table}[h!]
+\small
+\centering
+\caption{Time cost of different models}
+\begin{tabular}{ c c}
+\specialrule{.1em}{.05em}{.05em} 
+ Model& Time cost\\
+\specialrule{.1em}{.05em}{.05em} 
+ 1& 0.2343(0.0022) \\
+ 2& 0.2209(0.0033) \\
+ 3& 0.2204(0.0033) \\
+ 4& 0.2205(0.0033) \\
+ 5& 0.2185(0.0034) \\
+ 6& 0.2187(0.0034) \\
+ 7& 0.2182(0.0035) \\
+\specialrule{.1em}{.05em}{.05em} 
+\end{tabular}
+\label{table:time}
+\end{table}
+
+除此之外，对体育赛事的预测和分析也会对体育行业的进步产生巨大的促进作用。比如，对主场优势的量化分析可以让一些两回合制的比赛以更加公平的方式计算结果，分析也可以揭示球队或者球员的强弱点，从而帮助球员提高水平或者帮助教练制定更好的战术。
+
+博彩行业的繁荣 而在体育博彩市场中，占据主要份额的是football，basketball，baseball and horse racing；本文选取了篮球作为研究目标，想通过Bayesian Inference的方式试图找到
+
+此外，篮球比赛只有两种可能的结果，因此$r=2$，则RPS可以简化为
+
+
+比如可以将travel distance延展为多个特征包括是否跨越时区以及是从东向西还是从西向东旅行。
+
++1 604 620 1665
+
+
+1-236-9846031
+
+进行更全面的分析
+
+我们并没有对covid-19的影响做细致的分析，因为疫情后的数据并不多，在
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+从直方图可以看出，大部分距离都在500公里到1500公里的范围内
+
+
+
+
+m7: nsdlcpo:  178012.9 DIC: 355831 
+    nsdlcpo:  28422.48 DIC: 56821.59 
+
+m6: nslcpo:  177873.7 DIC: 355616 
+    nsdlcpo:  28290.88 DIC: 56582.63
+
+362429.74
+362426.60
+
+
+full model:
+
+m1:
+189905.5   dic:379809.5
+31598      dic:63195.99
+
+m2:
+
+nslcpo:  187810.1  DIC: 375584.5
+nslcpo:  30872.98 DIC: 61745.8
+
+m3:
+nslcpo:  182901.8   DIC: 365778.1 
+nslcpo:  30055.69   DIC: 60111.04
+
+m4:
+nslcpo:  181224.4   DIC: 362426.6 
+nslcpo:  30018.74   DIC: 60036.85 
+
+m5:
+nslcpo:  177899.9  DIC: 355671.8 
+nslcpo:  28284.17  DIC: 56568.12 
+m6:
+nslcpo:  177873.7 DIC: 355616
+nslcpo:  28284.08 DIC: 56568
+m7:
+nslcpo:  178012.9 DIC: 355831
+nslcpo:  28422.69 DIC: 56821.84 
+
+"76ers"
