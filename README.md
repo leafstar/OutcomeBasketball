@@ -4,7 +4,7 @@
 
 Master Project
 
-Using INLA to predict the outcome of basketball matches.
+Using INLA to predict the outcome of basketball matches. Thesis is [here](https://github.com/leafstar/OutcomeBasketball/blob/main/MyThesis.pdf)
 
 The folder nba_data contains the datasets from the Kaggle website.
 
